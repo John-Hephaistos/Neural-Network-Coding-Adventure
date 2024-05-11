@@ -11,5 +11,6 @@ data = {
 # Create DataFrame
 pitch_name_map = pd.DataFrame(data)
 
+COLUMNS = ['Bass (36)', 'Closed Hi-Hat (42)', 'Snare (38)', 'Open Hi-Hat (46)']
 
 DATASET_PATH = './groove'
