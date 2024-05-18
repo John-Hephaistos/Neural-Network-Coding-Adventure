@@ -3,3 +3,6 @@ pandas
 tensorflow
 matplotlib
 pretty-midi
+pydub
+MIDIUtil
+pyaudio
