@@ -13,12 +13,14 @@ class MLP(nn.Module):
             torch.nn.Linear(input_size, 128),
             torch.nn.ReLU(),
             torch.nn.Linear(128, 256),
-            torch.nn.Sigmoid(),
-            torch.nn.Linear(256, output_size)
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, output_size),
+            torch.nn.Softmax()
+
         )
         self.double()
         self.optimizer = torch.optim.Adam(self.parameters(), lr=0.01)
-        self.loss_function = torch.nn.MSELoss()
+        self.loss_function = torch.nn.BCELoss()
 
     def train_model(self, epochs, train_x_data, train_y_data):
 
@@ -28,6 +30,7 @@ class MLP(nn.Module):
                 X = torch.tensor(X, dtype=torch.double)  # Ensure input is of type double
                 y = torch.tensor(y, dtype=torch.double)
                 output = self.forward(X)
+
                 loss = self.loss_function(output, y)
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -88,3 +91,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
