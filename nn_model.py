@@ -14,13 +14,22 @@ class MLP(nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(128, 256),
             torch.nn.ReLU(),
-            torch.nn.Linear(256, output_size),
+            torch.nn.Linear(256, 664),
+            torch.nn.ReLU(),
+            torch.nn.Linear(664, 664),
+            torch.nn.ReLU(),
+            torch.nn.Linear(664, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, 128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(128, output_size),
             torch.nn.Softmax()
+
 
         )
         self.double()
         self.optimizer = torch.optim.Adam(self.parameters(), lr=0.01)
-        self.loss_function = torch.nn.BCELoss()
+        self.loss_function = torch.nn.MSELoss()
 
     def train_model(self, epochs, train_x_data, train_y_data):
 
@@ -35,7 +44,7 @@ class MLP(nn.Module):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-                print(f"Epoch: {epoch + 1}; Loss: {loss.item()}")
+            print(f"Epoch: {epoch + 1}; Loss: {loss.item()}")
 
     def test_model(self, test_x_data, test_y_data):
         total_steps = len(test_x_data)
