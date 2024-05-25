@@ -7,6 +7,8 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import itertools
+from EarlyStopping import EarlyStopping
+
 
 class MLP(nn.Module):
     def __init__(self, input_size, output_size):
@@ -109,21 +111,26 @@ class LSTM(nn.Module):
                 optimizer.step()
                 
                 epoch_loss += loss.item()
-            
+
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss / len(train_loader):.4f}')
 
     def validate(self, val_loader, criterion=nn.BCEWithLogitsLoss(), device='cpu'):
         self.eval()
         val_loss = 0.0
-
+        count = 0
+        early_stopper = EarlyStopping()
         with torch.no_grad():
             for inputs, targets in val_loader:
                 outputs = self(inputs.to(device))
                 loss = criterion(outputs, targets.to(device))
 
-                val_loss += loss.item()
-
-        return val_loss / len(val_loader)
+                if early_stopper.check(self, loss) is False:
+                    val_loss += loss.item()
+                    count += 1
+                else:
+                    print("Stopped EARLYY")
+                    break
+        return val_loss / count
 
 def cross_validation(model, dataset, batch_size, num_folds=5, num_epochs=10, learning_rate=0.001, device='cpu'):
     fold_size = len(dataset) // num_folds
@@ -146,6 +153,8 @@ def cross_validation(model, dataset, batch_size, num_folds=5, num_epochs=10, lea
             batch_size=batch_size,
             shuffle=True
         )
+
+
         val_loader = torch.utils.data.DataLoader(
             dataset=val_subset,
             batch_size=batch_size,
@@ -185,7 +194,7 @@ def grid_search(dataset, parameter_grid, device):
     for params in param_combinations:
         hidden_dim, num_layers, learning_rate, batch_size, num_epochs, num_folds = params
         # Create a model and set parameters
-        model = LSTM()
+        model = LSTM(hidden_dim, num_layers)
         model.to(device)
         model.hidden_dim, model.num_layers = hidden_dim, num_layers
 
@@ -265,7 +274,7 @@ def main():
         'num_layers': [1, 2, 3],
         'learning_rate': [0.001, 0.01],
         'batch_size': [64, 128, 256],
-        'num_epochs': [50],
+        'num_epochs': [100],
         'num_folds': [10],
     }
 
