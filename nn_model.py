@@ -8,8 +8,9 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import itertools
 from EarlyStopping import EarlyStopping
-
-
+from sound_helpers import generate_track
+import sounddevice as sd
+import soundfile as sf
 class MLP(nn.Module):
     def __init__(self, input_size, output_size):
         super(MLP, self).__init__()
@@ -132,6 +133,16 @@ class LSTM(nn.Module):
                     break
         return val_loss / count
 
+    def generate(self, test_loader, device= 'cpu'):
+        output = []
+        with torch.no_grad():
+            for inputs, targets in test_loader:
+                y = self(inputs.to(device))
+                y = threshold_predictions(y)
+                output.append(y)
+        return output
+
+
 def cross_validation(model, dataset, batch_size, num_folds=5, num_epochs=10, learning_rate=0.001, device='cpu'):
     fold_size = len(dataset) // num_folds
     fold_losses = []
@@ -228,6 +239,9 @@ def threshold_predictions(predictions, threshold = 0.8):
     thresholded_predictions = (predictions >= threshold).float()
     return thresholded_predictions.cpu().numpy()
 
+
+
+
 def main():
     data = np.load('dataset.npy')
 
@@ -291,16 +305,48 @@ def main():
 
     ### Train the 'final' model
     # hidden_dim = 64, num_layers = 2, lr = 0.01, batch_size = 64, num_epochs = 100, num_folds = 10
+    """
     model = LSTM(hidden_dim=64, num_layers=2)
     train_loader = torch.utils.data.DataLoader(
         dataset=dataset,
         batch_size=64,
         shuffle=True
     )
-    model.train_model(train_loader,100, 0.01)
+    #model.train_model(train_loader,100, 0.01)
     filepath = "model_weights.pth"
     torch.save(model.state_dict(), filepath)
+    
+    """
+    filepath = "model_weights.pth"
+    model = LSTM(hidden_dim=64, num_layers=2)
+    model.eval()
+    model.load_state_dict(torch.load(filepath))
 
+    example_input = torch.tensor([[1, 1, 1, 1]], dtype=torch.float32)  # Shape: (1, 4)
+    example_input = example_input.unsqueeze(0)  # Shape: (1, 1, 4)
+
+    output = (model.forward(example_input))
+    predictions_thresh = threshold_predictions(output)
+    print(predictions_thresh)
+
+    test_loader = torch.utils.data.DataLoader(
+        dataset=dataset,
+        batch_size=64,
+        shuffle=True
+    )
+
+    output = model.generate(test_loader)
+    print(output[0][0])
+    for i in range(10):
+        for j in range(10):
+            generate_track(
+                bars=output[i][j],
+                bpm=140,
+                sounds_dir='sounds'
+            )
+            audio, samplerate = sf.read("track.wav")
+            sd.play(audio, samplerate)
+            sd.wait()
 
     # test_x_data = torch.tensor(test_x_data, dtype=torch.float32).to(device)
 
@@ -308,12 +354,10 @@ def main():
     # model.eval()  # Set the model to evaluation mode
     # with torch.no_grad():  # No need to track gradients during inference
     #     test_predictions = model(test_x_data)
-    
 
     # predictions_thresh = threshold_predictions(test_predictions)
     # np.save('test_pred.npy', predictions_thresh[0])
     # print(predictions_thresh.shape)
-
 if __name__ == '__main__':
     main()
 
