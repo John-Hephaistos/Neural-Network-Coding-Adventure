@@ -277,8 +277,8 @@ def main():
         'num_epochs': [100],
         'num_folds': [10],
     }
-
-    best_params, best_loss = grid_search(
+    """
+     best_params, best_loss = grid_search(
         dataset,
         parameter_grid,
         device
@@ -286,6 +286,21 @@ def main():
 
     print(best_loss)
     print(best_params)
+    """
+
+
+    ### Train the 'final' model
+    # hidden_dim = 64, num_layers = 2, lr = 0.01, batch_size = 64, num_epochs = 100, num_folds = 10
+    model = LSTM(hidden_dim=64, num_layers=2)
+    train_loader = torch.utils.data.DataLoader(
+        dataset=dataset,
+        batch_size=64,
+        shuffle=True
+    )
+    model.train_model(train_loader,100, 0.01)
+    filepath = "model_weights.pth"
+    torch.save(model.state_dict(), filepath)
+
 
     # test_x_data = torch.tensor(test_x_data, dtype=torch.float32).to(device)
 
