@@ -3,7 +3,7 @@ from pydub.playback import play
 from midiutil import MIDIFile
 import numpy as np
 
-def generate_track(bars_list, bpm, sounds_dir = "sounds"):
+def generate_track(bars, bpm, sounds_dir = "sounds"):
     beat_duration = 60 / bpm
 
     # Load the audio samples
@@ -15,7 +15,7 @@ def generate_track(bars_list, bpm, sounds_dir = "sounds"):
     silence = AudioSegment.silent(duration=beat_duration * 1000)
     track = AudioSegment.silent(duration=0)
 
-    for beat in np.concatenate(bars_list):
+    for beat in bars:
         beat_segment = silence
         if beat[0]:
             beat_segment = beat_segment.overlay(bass)
