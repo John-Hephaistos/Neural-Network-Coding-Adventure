@@ -79,13 +79,15 @@ class LSTM(nn.Module):
                     break
         return val_loss / count
 
-    def generate(self, test_loader, length=16, device='cpu'):
+    def generate(self, input_sequences, length=16, device='cpu'):
         output = []
-        with torch.no_grad():
-            for inputs, targets in test_loader:
-                y = self(inputs.to(device))
-                y = threshold_predictions(y)
-                output.append(y)
+        for input_sequence in input_sequences:
+            for _ in range(length):
+                with torch.no_grad():
+                    generated = self.forward(input_sequence)
+                    output.append(generated)
+                    input_sequence = generated
+
         return output
 
 
@@ -249,18 +251,23 @@ def main():
     validation_loss = best_model.validate(val_loader=val_loader, device=device)
     print(validation_loss)
 
-    generated_track = best_model.generate(val_loader)
-    for i in range(10):
-        for j in range(10):
-            generate_track(
-                bars=output[i][j],
-                bpm=140,
-                sounds_dir='sounds',
-                filename='track_i'
-            )
-            # audio, samplerate = sf.read(f"track_{i}.wav")
-            # sd.play(audio, samplerate)
-            # sd.wait()
+
+    # Generate 2 tracks:
+    generated_track_1 = best_model.generate(val_loader[0][0])
+    generated_track_2 = best_model.generate(val_loader[-1][0])
+
+    generate_track(
+        bars=generated_track_1,
+        bpm=140,
+        sounds_dir='sounds',
+        filename='track_1'
+    )
+    generate_track(
+        bars=generated_track_2,
+        bpm=140,
+        sounds_dir='sounds',
+        filename='track_2'
+    )
 
 if __name__ == '__main__':
     main()
