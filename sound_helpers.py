@@ -1,9 +1,12 @@
 from pydub import AudioSegment
-from pydub.playback import play
-from midiutil import MIDIFile
-import numpy as np
+
 
 def generate_track(bars, bpm, sounds_dir = 'sounds', filename='track'):
+    '''
+    Generate a .wav track from a list of bars for the 4 instruments
+    Instruments are in the sound directory
+    '''
+
     beat_duration = 60 / bpm
 
     # Load the audio samples
@@ -12,19 +15,26 @@ def generate_track(bars, bpm, sounds_dir = 'sounds', filename='track'):
     open_hihat = AudioSegment.from_wav(f"{sounds_dir}/Open Hi-Hat.wav")
     closed_hihat = AudioSegment.from_wav(f"{sounds_dir}/Closed Hi-Hat.wav")
 
-    silence = AudioSegment.silent(duration=beat_duration * 1000)
+    # Initialise track and silent overlay
+    silence = AudioSegment.silent(duration=int(beat_duration * 1000))
     track = AudioSegment.silent(duration=0)
 
     for beat in bars:
-        beat_segment = silence
-        if beat[0]:
-            beat_segment = beat_segment.overlay(bass)
-        if beat[1]:
-            beat_segment = beat_segment.overlay(closed_hihat)
-        if beat[2]:
-            beat_segment = beat_segment.overlay(snare)
-        if beat[3]:
-            beat_segment = beat_segment.overlay(open_hihat)
-        track += beat_segment
+        # Initialize beat segment
+        beat_segment = AudioSegment.silent(duration=0)
 
-    track.export(filename, format="wav")
+        # Overlay instrument sounds
+        if beat[0]:
+            beat_segment += bass
+        if beat[1]:
+            beat_segment += closed_hihat
+        if beat[2]:
+            beat_segment += snare
+        if beat[3]:
+            beat_segment += open_hihat
+
+        # Add segment to the track
+        track += beat_segment + silence
+
+    # Export track with proper format
+    track.export(filename + '.wav', format="wav")

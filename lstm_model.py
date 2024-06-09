@@ -6,11 +6,9 @@ import torch.optim as optim
 import itertools
 from EarlyStopping import EarlyStopping
 from sound_helpers import generate_track
-import sounddevice as sd
-import soundfile as sf
 
 class LSTM(nn.Module):
-    def __init__(self, hidden_dim, num_layers, input_dim=4, output_dim=4):
+    def __init__(self, hidden_dim, num_layers, dropout=0.5, input_dim=4, output_dim=4):
         super(LSTM, self).__init__()
         
         # Parameters
@@ -21,6 +19,9 @@ class LSTM(nn.Module):
         
         # LSTM Layer
         self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+
+        # Dropout layer
+        self.dropout = nn.Dropout(dropout)
         
         # Fully connected layer
         self.fc = nn.Linear(hidden_dim, output_dim)
@@ -79,16 +80,21 @@ class LSTM(nn.Module):
                     break
         return val_loss / count
 
-    def generate(self, input_sequences, length=16, device='cpu'):
+    def generate(self, input_sequence, length=16, threshold=.5, device='cpu'):
         output = []
-        for input_sequence in input_sequences:
-            for _ in range(length):
-                with torch.no_grad():
-                    generated = self.forward(input_sequence)
-                    output.append(generated)
-                    input_sequence = generated
+        for _ in range(length):
+            with torch.no_grad():
+                generated = self.forward(input_sequence.to(device))
+                output.append(generated)
+                input_sequence = generated
 
-        return output
+        output = torch.cat(output, dim=0)  # Concatenate along the batch dimension
+        output = output.view(-1, output.size(-1))  # Flatten the first two dimensions
+
+        thresholded_tensor = torch.where(output >= threshold, torch.tensor(1), torch.tensor(0))
+
+        # Convert tensor to NumPy array
+        return thresholded_tensor.cpu().numpy()
 
 
 def cross_validation(model, dataset, batch_size, num_folds=5, num_epochs=10, learning_rate=0.001, dropout=0.5, device='cpu'):
@@ -135,7 +141,7 @@ def cross_validation(model, dataset, batch_size, num_folds=5, num_epochs=10, lea
             train_loader,
             num_epochs=num_epochs,
             learning_rate=learning_rate,
-            device=device
+            device=device,
         )
 
         # Evaluate the model on the validation set
@@ -189,11 +195,9 @@ def threshold_predictions(predictions, threshold = 0.8):
     thresholded_predictions = (predictions >= threshold).float()
     return thresholded_predictions.cpu().numpy()
 
-
-def main():
-    data = np.load('train_dataset.npy')
-
+def xy_split_dataset(data):
     x_data, y_data = [], []
+
     for samples in data:
         x_data.append(samples[0])
         y_data.append(samples[1])
@@ -203,6 +207,9 @@ def main():
         torch.tensor(y_data, dtype=torch.float32)
     )
 
+    return dataset
+
+def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     parameter_grid = {
@@ -215,33 +222,46 @@ def main():
         'num_folds': [10],
     }
 
+    train_dataset = xy_split_dataset(data=np.load('train_dataset.npy'))
+
     best_params, best_loss = grid_search(
-        dataset,
+        train_dataset,
         parameter_grid,
         device
     )
 
-    print(best_loss)
-    print(best_params)
+    print(f'\nBest model loss: {best_loss}')
+    print(f'Best parameters: {best_params}\n')
 
     # Train the 'final' model
     hidden_dim, num_layers, learning_rate, dropout, batch_size, num_epochs, _ = best_params
-    best_model = LSTM(hidden_dim=hidden_dim, num_layers=num_layers)
+    best_model = LSTM(
+        hidden_dim=hidden_dim,
+        num_layers=num_layers,
+        dropout=dropout,
+    )
 
     train_loader = torch.utils.data.DataLoader(
-        dataset=dataset,
+        dataset=train_dataset,
         batch_size=batch_size,
-        dropout=dropout,
         shuffle=True
     )
 
-    best_model.train_model(train_loader, num_epochs=num_epochs, learning_rate=learning_rate, device=device)
+    best_model.train_model(
+        train_loader,
+        num_epochs=num_epochs,
+        learning_rate=learning_rate,
+        device=device
+    )
 
     filepath = "model_weights.pth"
     torch.save(best_model.state_dict(), filepath)
 
 
-    val_dataset = np.load('val_dataset.npy')
+    val_dataset = xy_split_dataset(
+        data=np.load('val_dataset.npy'),
+    )
+
     val_loader = torch.utils.data.DataLoader(
         dataset=val_dataset,
         batch_size=batch_size,
@@ -249,25 +269,18 @@ def main():
     )
 
     validation_loss = best_model.validate(val_loader=val_loader, device=device)
-    print(validation_loss)
-
+    print(f'Final model validation loss" {validation_loss}')
 
     # Generate 2 tracks:
-    generated_track_1 = best_model.generate(val_loader[0][0])
-    generated_track_2 = best_model.generate(val_loader[-1][0])
+    for i in range(2):
+        generated_track = best_model.generate(val_dataset[i][0].unsqueeze(0))
+        generate_track(
+            bars=generated_track,
+            bpm=140,
+            sounds_dir='sounds',
+            filename=f'track_{i}',
+        )
 
-    generate_track(
-        bars=generated_track_1,
-        bpm=140,
-        sounds_dir='sounds',
-        filename='track_1'
-    )
-    generate_track(
-        bars=generated_track_2,
-        bpm=140,
-        sounds_dir='sounds',
-        filename='track_2'
-    )
 
 if __name__ == '__main__':
     main()

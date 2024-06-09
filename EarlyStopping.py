@@ -26,7 +26,7 @@ class EarlyStopping:
             if self.counter >= self._patience:
                 self.status = f"STOPPED on {self.counter}, current best loss: {self.best_loss}"
                 if self._restore_best_weights:
-                    model.load_state_dic(self.best_model.state_dic())
+                    model.load_state_dict(self.best_model.state_dict())
                 return True
         self.status = f"{self.counter} // {self._patience}"
         print(self.status)
