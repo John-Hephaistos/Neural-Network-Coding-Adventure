@@ -3,7 +3,7 @@ from pydub.playback import play
 from midiutil import MIDIFile
 import numpy as np
 
-def generate_track(bars, bpm, sounds_dir = "sounds"):
+def generate_track(bars, bpm, sounds_dir = 'sounds', filename='track'):
     beat_duration = 60 / bpm
 
     # Load the audio samples
@@ -27,4 +27,4 @@ def generate_track(bars, bpm, sounds_dir = "sounds"):
             beat_segment = beat_segment.overlay(open_hihat)
         track += beat_segment
 
-    track.export("track.wav", format="wav")
+    track.export(filename, format="wav")

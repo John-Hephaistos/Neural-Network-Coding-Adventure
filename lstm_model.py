@@ -79,7 +79,7 @@ class LSTM(nn.Module):
                     break
         return val_loss / count
 
-    def generate(self, test_loader, device='cpu'):
+    def generate(self, test_loader, length=16, device='cpu'):
         output = []
         with torch.no_grad():
             for inputs, targets in test_loader:
@@ -242,7 +242,7 @@ def main():
     val_dataset = np.load('val_dataset.npy')
     val_loader = torch.utils.data.DataLoader(
         dataset=val_dataset,
-        batch_size=64,
+        batch_size=batch_size,
         shuffle=True
     )
 
@@ -255,21 +255,12 @@ def main():
             generate_track(
                 bars=output[i][j],
                 bpm=140,
-                sounds_dir='sounds'
+                sounds_dir='sounds',
+                filename='track_i'
             )
-            audio, samplerate = sf.read("track.wav")
-            sd.play(audio, samplerate)
-            sd.wait()
+            # audio, samplerate = sf.read(f"track_{i}.wav")
+            # sd.play(audio, samplerate)
+            # sd.wait()
 
-    # test_x_data = torch.tensor(test_x_data, dtype=torch.float32).to(device)
-
-    # # Generate predictions
-    # model.eval()  # Set the model to evaluation mode
-    # with torch.no_grad():  # No need to track gradients during inference
-    #     test_predictions = model(test_x_data)
-
-    # predictions_thresh = threshold_predictions(test_predictions)
-    # np.save('test_pred.npy', predictions_thresh[0])
-    # print(predictions_thresh.shape)
 if __name__ == '__main__':
     main()
