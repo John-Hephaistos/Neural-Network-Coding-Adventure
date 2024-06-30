@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.utils.data import Subset
@@ -45,7 +46,7 @@ class LSTM(nn.Module):
         criterion = nn.BCEWithLogitsLoss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         self.train()
-
+        epoch_losses = []
         # Training
         for epoch in range(num_epochs):
             epoch_loss = 0.0
@@ -59,8 +60,20 @@ class LSTM(nn.Module):
                 optimizer.step()
                 
                 epoch_loss += loss.item()
+            epoch_losses.append(epoch_loss / len(train_loader))
 
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss / len(train_loader):.4f}')
+            # Plotting the loss
+
+            plt.figure()
+            plt.plot(epoch_losses, label='Training loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.title('Training Loss over Epochs')
+            plt.legend()
+            plt.grid(True)
+            plt.savefig("plot_loss.png")
+            plt.close()
 
     def validate(self, val_loader, criterion=nn.BCEWithLogitsLoss(), device='cpu'):
         self.eval()
