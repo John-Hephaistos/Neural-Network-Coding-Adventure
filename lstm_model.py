@@ -71,13 +71,8 @@ class LSTM(nn.Module):
             for inputs, targets in val_loader:
                 outputs = self(inputs.to(device))
                 loss = criterion(outputs, targets.to(device))
-
-                if early_stopper.check(self, loss) is False:
-                    val_loss += loss.item()
-                    count += 1
-                else:
-                    print("Stopped EARLYY")
-                    break
+                val_loss += loss.item()
+                count += 1
         return val_loss / count
 
     def generate(self, input_sequence, length=16, threshold=.5, device='cpu'):
